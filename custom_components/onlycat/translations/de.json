@@ -74,6 +74,53 @@
             "onlycat_last_activity_video": {
                 "name": "Letztes Video"
             }
+        },
+        "sensor": {
+            "onlycat_transits_in_today": {
+                "name": "Eintritte heute"
+            },
+            "onlycat_transits_out_today": {
+                "name": "Austritte heute"
+            },
+            "onlycat_peeks_today": {
+                "name": "Blicke heute"
+            },
+            "onlycat_denies_today": {
+                "name": "Abweisungen heute"
+            },
+            "onlycat_prey_attempts_today": {
+                "name": "Beuteversuche heute"
+            },
+            "onlycat_events_today": {
+                "name": "Ereignisse heute"
+            },
+            "onlycat_human_activity_today": {
+                "name": "Menschliche Aktivität heute"
+            },
+            "onlycat_remote_unlocks_today": {
+                "name": "Fernentriegelungen heute"
+            },
+            "onlycat_manual_unlocks_today": {
+                "name": "Manuelle Entriegelungen heute"
+            },
+            "onlycat_unidentified_transits_today": {
+                "name": "Unbekannte Durchgänge heute"
+            },
+            "onlycat_pet_transits_in_today": {
+                "name": "{pet_name}: Eintritte heute"
+            },
+            "onlycat_pet_transits_out_today": {
+                "name": "{pet_name}: Austritte heute"
+            },
+            "onlycat_pet_peeks_today": {
+                "name": "{pet_name}: Blicke heute"
+            },
+            "onlycat_pet_denies_today": {
+                "name": "{pet_name}: Abweisungen heute"
+            },
+            "onlycat_pet_prey_attempts_today": {
+                "name": "{pet_name}: Beuteversuche heute"
+            }
         }
     }
 }

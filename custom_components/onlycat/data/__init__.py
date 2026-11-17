@@ -10,7 +10,10 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
 
     from custom_components.onlycat.api import OnlyCatApiClient
-    from custom_components.onlycat.coordinator import OnlyCatDataUpdateCoordinator
+    from custom_components.onlycat.coordinator import (
+        OnlyCatDataUpdateCoordinator,
+        OnlyCatStatsCoordinator,
+    )
 
     from .device import Device
     from .event_store import EventStore
@@ -32,3 +35,4 @@ class OnlyCatData:
     event_store: EventStore
     settings: dict[str, object]
     coordinator: OnlyCatDataUpdateCoordinator
+    stats_coordinator: OnlyCatStatsCoordinator
