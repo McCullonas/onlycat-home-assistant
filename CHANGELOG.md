@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v2.0.9.1 (McCullonas fork: upstream v2.0.9 plus activity stats)
 ### Changes
 - Daily activity stats sensors from the gateway's rollups (`getActivityStats`, `getDeviceActivityStats`): per chip, today's transits in and out, peeks, denies and prey attempts; per flap, the same for every cat together plus events, human activity, remote and manual unlocks and unidentified transits. Each has the last 7 days' total and hour histogram as attributes. They refresh every 5 minutes and shortly after each flap event; days without a rollup row count as zero.
 
