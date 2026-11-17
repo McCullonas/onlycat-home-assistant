@@ -15,7 +15,7 @@ from homeassistant.const import Platform
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import OnlyCatApiClient
-from .coordinator import OnlyCatDataUpdateCoordinator
+from .coordinator import OnlyCatDataUpdateCoordinator, OnlyCatStatsCoordinator
 from .data.__init__ import OnlyCatConfigEntry, OnlyCatData
 from .data.device import Device
 from .data.event_store import EventStore
@@ -53,12 +53,16 @@ async def async_setup_entry(
         event_store=EventStore(api_client=client),
         settings=entry.data["settings"],
         coordinator=OnlyCatDataUpdateCoordinator(hass=hass, config_entry=entry),
+        stats_coordinator=OnlyCatStatsCoordinator(hass=hass, config_entry=entry),
     )
     await entry.runtime_data.client.connect()
 
     await _initialize_devices(entry)
     await _initialize_pets(entry)
     await entry.runtime_data.coordinator.async_config_entry_first_refresh()
+    # Stats are extra: a failed first fetch leaves their sensors unavailable
+    # until the next poll, it doesn't fail the setup.
+    await entry.runtime_data.stats_coordinator.async_refresh()
 
     entry.runtime_data.client.add_event_listener(
         "deviceEventUpdate", entry.runtime_data.event_store.on_device_event_update
@@ -75,6 +79,10 @@ async def async_setup_entry(
     entry.runtime_data.client.add_event_listener(
         "eventSummaryUpdate", entry.runtime_data.event_store.on_event_summary_update
     )
+    for event in ("deviceEventUpdate", "eventSummaryUpdate"):
+        entry.runtime_data.client.add_event_listener(
+            event, entry.runtime_data.stats_coordinator.on_flap_event
+        )
 
     async def refresh_subscriptions(args: dict | None) -> None:
         _LOGGER.debug("Refreshing subscriptions, caused by event: %s", args)

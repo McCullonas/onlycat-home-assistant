@@ -16,6 +16,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
+from .sensor_activity import activity_sensors
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,6 +47,12 @@ async def async_setup_entry(
         for device in entry.runtime_data.devices
         for policy_id, policy in (device.device_transit_policies or {}).items()
     ]
+    if entry.runtime_data.stats_coordinator is not None:
+        entities += activity_sensors(
+            entry.runtime_data.stats_coordinator,
+            entry.runtime_data.devices,
+            entry.runtime_data.event_store.get_pets(),
+        )
     async_add_entities(entities)
     entry.runtime_data.coordinator.async_update_listeners()
 

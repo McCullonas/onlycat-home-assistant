@@ -74,6 +74,53 @@
             "onlycat_last_activity_video": {
                 "name": "Letztes Video"
             }
+        },
+        "sensor": {
+            "transits_in_today": {
+                "name": "Eintritte heute"
+            },
+            "transits_out_today": {
+                "name": "Austritte heute"
+            },
+            "peeks_today": {
+                "name": "Blicke heute"
+            },
+            "denies_today": {
+                "name": "Abweisungen heute"
+            },
+            "prey_attempts_today": {
+                "name": "Beuteversuche heute"
+            },
+            "events_today": {
+                "name": "Ereignisse heute"
+            },
+            "human_activity_today": {
+                "name": "Menschliche Aktivität heute"
+            },
+            "remote_unlocks_today": {
+                "name": "Fernentriegelungen heute"
+            },
+            "manual_unlocks_today": {
+                "name": "Manuelle Entriegelungen heute"
+            },
+            "unidentified_transits_today": {
+                "name": "Unbekannte Durchgänge heute"
+            },
+            "pet_transits_in_today": {
+                "name": "{pet_name}: Eintritte heute"
+            },
+            "pet_transits_out_today": {
+                "name": "{pet_name}: Austritte heute"
+            },
+            "pet_peeks_today": {
+                "name": "{pet_name}: Blicke heute"
+            },
+            "pet_denies_today": {
+                "name": "{pet_name}: Abweisungen heute"
+            },
+            "pet_prey_attempts_today": {
+                "name": "{pet_name}: Beuteversuche heute"
+            }
         }
     }
 }
