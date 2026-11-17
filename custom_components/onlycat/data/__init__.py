@@ -35,4 +35,4 @@ class OnlyCatData:
     event_store: EventStore
     settings: dict[str, object]
     coordinator: OnlyCatDataUpdateCoordinator
-    stats_coordinator: OnlyCatStatsCoordinator | None = None
+    stats_coordinator: OnlyCatStatsCoordinator

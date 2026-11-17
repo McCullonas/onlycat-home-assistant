@@ -47,12 +47,11 @@ async def async_setup_entry(
         for device in entry.runtime_data.devices
         for policy_id, policy in (device.device_transit_policies or {}).items()
     ]
-    if entry.runtime_data.stats_coordinator is not None:
-        entities += activity_sensors(
-            entry.runtime_data.stats_coordinator,
-            entry.runtime_data.devices,
-            entry.runtime_data.event_store.get_pets(),
-        )
+    entities += activity_sensors(
+        entry.runtime_data.stats_coordinator,
+        entry.runtime_data.devices,
+        entry.runtime_data.event_store.get_pets(),
+    )
     async_add_entities(entities)
     entry.runtime_data.coordinator.async_update_listeners()
 

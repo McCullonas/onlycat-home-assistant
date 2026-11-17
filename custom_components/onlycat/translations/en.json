@@ -80,49 +80,49 @@
             }
         },
         "sensor": {
-            "transits_in_today": {
+            "onlycat_transits_in_today": {
                 "name": "Transits in today"
             },
-            "transits_out_today": {
+            "onlycat_transits_out_today": {
                 "name": "Transits out today"
             },
-            "peeks_today": {
+            "onlycat_peeks_today": {
                 "name": "Peeks today"
             },
-            "denies_today": {
+            "onlycat_denies_today": {
                 "name": "Denies today"
             },
-            "prey_attempts_today": {
+            "onlycat_prey_attempts_today": {
                 "name": "Prey attempts today"
             },
-            "events_today": {
+            "onlycat_events_today": {
                 "name": "Events today"
             },
-            "human_activity_today": {
+            "onlycat_human_activity_today": {
                 "name": "Human activity today"
             },
-            "remote_unlocks_today": {
+            "onlycat_remote_unlocks_today": {
                 "name": "Remote unlocks today"
             },
-            "manual_unlocks_today": {
+            "onlycat_manual_unlocks_today": {
                 "name": "Manual unlocks today"
             },
-            "unidentified_transits_today": {
+            "onlycat_unidentified_transits_today": {
                 "name": "Unidentified transits today"
             },
-            "pet_transits_in_today": {
+            "onlycat_pet_transits_in_today": {
                 "name": "{pet_name}: Transits in today"
             },
-            "pet_transits_out_today": {
+            "onlycat_pet_transits_out_today": {
                 "name": "{pet_name}: Transits out today"
             },
-            "pet_peeks_today": {
+            "onlycat_pet_peeks_today": {
                 "name": "{pet_name}: Peeks today"
             },
-            "pet_denies_today": {
+            "onlycat_pet_denies_today": {
                 "name": "{pet_name}: Denies today"
             },
-            "pet_prey_attempts_today": {
+            "onlycat_pet_prey_attempts_today": {
                 "name": "{pet_name}: Prey attempts today"
             }
         }

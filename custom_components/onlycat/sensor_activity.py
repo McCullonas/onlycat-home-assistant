@@ -17,7 +17,7 @@ from .const import DOMAIN
 
 if TYPE_CHECKING:
     from .coordinator import OnlyCatStatsCoordinator
-    from .data.activity_stats import StatsWindow
+    from .data.activity_stats import ActivityStats, StatsWindow
     from .data.device import Device
     from .data.pet import Pet
 
@@ -29,31 +29,36 @@ class OnlyCatActivitySensorDescription(SensorEntityDescription):
     stat: str
 
 
-def _count(key: str, stat: str, icon: str) -> OnlyCatActivitySensorDescription:
+def _daily_count(key: str, stat: str, icon: str) -> OnlyCatActivitySensorDescription:
     return OnlyCatActivitySensorDescription(
         key=key,
         stat=stat,
         icon=icon,
-        translation_key=key,
+        translation_key=f"onlycat_{key}",
+        # Resets at the flap's midnight, which HA reads as a new cycle.
         state_class=SensorStateClass.TOTAL_INCREASING,
     )
 
 
 CHIP_SENSORS = (
-    _count("transits_in_today", "transitsIn", "mdi:home-import-outline"),
-    _count("transits_out_today", "transitsOut", "mdi:home-export-outline"),
-    _count("peeks_today", "peeks", "mdi:eye-outline"),
-    _count("denies_today", "denies", "mdi:cancel"),
-    _count("prey_attempts_today", "preyAttempts", "mdi:rodent"),
+    _daily_count("transits_in_today", "transitsIn", "mdi:home-import-outline"),
+    _daily_count("transits_out_today", "transitsOut", "mdi:home-export-outline"),
+    _daily_count("peeks_today", "peeks", "mdi:eye-outline"),
+    _daily_count("denies_today", "denies", "mdi:cancel"),
+    _daily_count("prey_attempts_today", "preyAttempts", "mdi:rodent"),
 )
 
 DEVICE_SENSORS = (
     *CHIP_SENSORS,
-    _count("events_today", "totalEvents", "mdi:counter"),
-    _count("human_activity_today", "humanActivityEvents", "mdi:human"),
-    _count("remote_unlocks_today", "remoteUnlocks", "mdi:cellphone-key"),
-    _count("manual_unlocks_today", "manualUnlocks", "mdi:lock-open-variant-outline"),
-    _count("unidentified_transits_today", "unidentifiedTransits", "mdi:help-circle"),
+    _daily_count("events_today", "totalEvents", "mdi:counter"),
+    _daily_count("human_activity_today", "humanActivityEvents", "mdi:human"),
+    _daily_count("remote_unlocks_today", "remoteUnlocks", "mdi:cellphone-key"),
+    _daily_count(
+        "manual_unlocks_today", "manualUnlocks", "mdi:lock-open-variant-outline"
+    ),
+    _daily_count(
+        "unidentified_transits_today", "unidentifiedTransits", "mdi:help-circle"
+    ),
 )
 
 
@@ -84,8 +89,13 @@ class OnlyCatActivitySensor(CoordinatorEntity["OnlyCatStatsCoordinator"], Sensor
             serial_number=self.device.device_id,
         )
 
-    def _window(self) -> StatsWindow | None:
+    def _window_of(self, stats: ActivityStats) -> StatsWindow:
         raise NotImplementedError
+
+    def _window(self) -> StatsWindow | None:
+        if self.coordinator.data is None:
+            return None
+        return self._window_of(self.coordinator.data)
 
     @property
     def available(self) -> bool:
@@ -109,9 +119,7 @@ class OnlyCatActivitySensor(CoordinatorEntity["OnlyCatStatsCoordinator"], Sensor
         return {
             "last_7_days": window.get_last_7_days(self.entity_description.stat),
             "hour_histogram_7d": list(window.hour_histogram_7d),
-            "day": self.coordinator.data.day.isoformat()
-            if self.coordinator.data.day
-            else None,
+            "day": window.day.isoformat() if window.day else None,
         }
 
 
@@ -129,17 +137,15 @@ class OnlyCatChipActivitySensor(OnlyCatActivitySensor):
         super().__init__(coordinator, description, device)
         self.pet = pet
         pet_name = pet.label if pet.label is not None else pet.rfid_code
-        self._attr_translation_key = f"pet_{description.key}"
+        self._attr_translation_key = f"onlycat_pet_{description.key}"
         self._attr_translation_placeholders = {"pet_name": pet_name}
         self._attr_unique_id = f"{pet.rfid_code}_{description.key}"
         self.entity_id = f"sensor.{self._attr_unique_id}"
         # Chips nobody named are usually visiting cats: there, but off by default.
         self._attr_entity_registry_enabled_default = pet.label is not None
 
-    def _window(self) -> StatsWindow | None:
-        if self.coordinator.data is None:
-            return None
-        return self.coordinator.data.chip(self.pet.rfid_code)
+    def _window_of(self, stats: ActivityStats) -> StatsWindow:
+        return stats.chip(self.pet.rfid_code)
 
 
 class OnlyCatDeviceActivitySensor(OnlyCatActivitySensor):
@@ -158,10 +164,8 @@ class OnlyCatDeviceActivitySensor(OnlyCatActivitySensor):
         )
         self.entity_id = f"sensor.{self._attr_unique_id}"
 
-    def _window(self) -> StatsWindow | None:
-        if self.coordinator.data is None:
-            return None
-        return self.coordinator.data.device(self.device.device_id)
+    def _window_of(self, stats: ActivityStats) -> StatsWindow:
+        return stats.device(self.device.device_id)
 
 
 def activity_sensors(

@@ -397,3 +397,28 @@ async def test_sensors_without_data_are_unavailable() -> None:
     assert luna_in.native_value is None
     assert luna_in.extra_state_attributes is None
     assert not luna_in.available
+
+
+@pytest.mark.asyncio
+async def test_chip_requests_batch_twenty_devices() -> None:
+    """The gateway takes 20 devices a request; a chip sums over the batches."""
+    gateway = luna_gateway()
+    devices = [(f"OC-{n:011d}", LONDON) for n in range(21)]
+    stats = await fetch_activity_stats(gateway.send_message, devices, now=NOW)
+    cat_calls = [data for _, data in gateway.calls if data.get("groupBy") == "cat"]
+    assert [len(data["deviceIds"]) for data in cat_calls] == [20, 20, 1, 1]
+    assert stats.chip(LUNA).get_last_7_days("transitsIn") == 2 * 46
+    assert stats.chip(LUNA).get_today("transitsIn") == 2 * 3
+
+
+@pytest.mark.asyncio
+async def test_each_device_counts_its_own_day() -> None:
+    """A flap in another zone reports on its own local day."""
+    gateway = luna_gateway()
+    tokyo = zoneinfo.ZoneInfo("Asia/Tokyo")
+    stats = await fetch_activity_stats(
+        gateway.send_message, [(DEVICE_ID, LONDON), ("OC-TOKYO", tokyo)], now=NOW
+    )
+    assert stats.device(DEVICE_ID).day.isoformat() == "2026-11-17"
+    assert stats.device("OC-TOKYO").day.isoformat() == "2026-11-18"
+    assert stats.chip(LUNA).day.isoformat() == "2026-11-17"

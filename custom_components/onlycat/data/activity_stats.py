@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 STATS_DAYS = 7
+MAX_DEVICE_IDS = 20
 HOURS = 24
 UNIDENTIFIED_RFID_CODE = "none"
 
@@ -49,6 +50,7 @@ class ActivityStatsError(Exception):
 class StatsWindow:
     """Counts for today and summed over the last seven days, today included."""
 
+    day: date | None = None
     today: dict[str, int] = field(default_factory=dict)
     last_7_days: dict[str, int] = field(default_factory=dict)
     hour_histogram_7d: list[int] = field(default_factory=lambda: [0] * HOURS)
@@ -72,11 +74,11 @@ class ActivityStats:
 
     def chip(self, rfid_code: str) -> StatsWindow:
         """Return a chip's stats, all zero for a chip without rows."""
-        return self.chips.get(rfid_code) or StatsWindow()
+        return self.chips.get(rfid_code) or StatsWindow(day=self.day)
 
     def device(self, device_id: str) -> StatsWindow:
         """Return a device's stats, all zero for a device without rows."""
-        return self.devices.get(device_id) or StatsWindow()
+        return self.devices.get(device_id) or StatsWindow(day=self.day)
 
 
 def _count(row: dict, key: str) -> int:
@@ -120,6 +122,22 @@ def local_today(time_zone: tzinfo | None, now: datetime | None = None) -> date:
     return now.astimezone(time_zone).date() if time_zone else now.date()
 
 
+def _add(totals: dict[str, int], more: dict[str, int]) -> dict[str, int]:
+    return {key: totals.get(key, 0) + more.get(key, 0) for key in totals | more}
+
+
+def _add_histograms(totals: list[int], more: list[int]) -> list[int]:
+    return [a + b for a, b in zip(totals, more, strict=True)]
+
+
+def _chips(rows: list[dict]) -> Iterable[tuple[str, dict]]:
+    """Yield (chip, row) for every identified chip's row."""
+    for row in rows:
+        rfid_code = row.get("rfidCode")
+        if rfid_code and rfid_code != UNIDENTIFIED_RFID_CODE:
+            yield rfid_code, row
+
+
 async def fetch_activity_stats(
     send_message: Callable[[str, dict], Awaitable[Any]],
     devices: Iterable[tuple[str, tzinfo | None]],
@@ -129,76 +147,71 @@ async def fetch_activity_stats(
     Fetch today's and the last seven days' stats for chips and devices.
 
     ``devices`` are (device id, device time zone) pairs. Chip stats are summed
-    over every device; "today" is the first device's local day.
+    over every device; a chip's "today" is the first device's local day.
     """
     devices = list(devices)
     if not devices:
         return ActivityStats()
-    today = local_today(devices[0][1], now)
-    first = today - timedelta(days=STATS_DAYS - 1)
-    stats = ActivityStats(day=today)
 
-    def window(from_day: date, to_day: date, device_ids: list[str]) -> dict:
-        return {
+    async def request(
+        event: str,
+        key: str,
+        device_ids: list[str],
+        first: date,
+        last: date,
+        **extra: str,
+    ) -> list[dict]:
+        criteria = {
             "deviceIds": device_ids,
-            "from": from_day.isoformat(),
-            "to": to_day.isoformat(),
+            "from": first.isoformat(),
+            "to": last.isoformat(),
         }
+        return _rows(await send_message(event, criteria | extra), key)
 
+    today = local_today(devices[0][1], now)
+    week_start = today - timedelta(days=STATS_DAYS - 1)
+    stats = ActivityStats(day=today)
     all_ids = [device_id for device_id, _ in devices]
-    week_cats = _rows(
-        await send_message(
-            "getActivityStats", window(first, today, all_ids) | {"groupBy": "cat"}
-        ),
-        "cats",
-    )
-    today_cats = _rows(
-        await send_message(
-            "getActivityStats", window(today, today, all_ids) | {"groupBy": "cat"}
-        ),
-        "cats",
-    )
-    for row in week_cats:
-        rfid_code = row.get("rfidCode")
-        if not rfid_code or rfid_code == UNIDENTIFIED_RFID_CODE:
-            continue
-        chip = stats.chips.setdefault(rfid_code, StatsWindow())
-        chip.last_7_days = _sum_rows([row], ACTIVITY_COUNTS)
-        chip.hour_histogram_7d = _sum_histograms([row])
-    for row in today_cats:
-        rfid_code = row.get("rfidCode")
-        if not rfid_code or rfid_code == UNIDENTIFIED_RFID_CODE:
-            continue
-        stats.chips.setdefault(rfid_code, StatsWindow()).today = _sum_rows(
-            [row], ACTIVITY_COUNTS
+    # The gateway takes at most MAX_DEVICE_IDS devices per request.
+    for start in range(0, len(all_ids), MAX_DEVICE_IDS):
+        ids = all_ids[start : start + MAX_DEVICE_IDS]
+        week = await request(
+            "getActivityStats", "cats", ids, week_start, today, groupBy="cat"
         )
+        for rfid_code, row in _chips(week):
+            chip = stats.chips.setdefault(rfid_code, StatsWindow(day=today))
+            chip.last_7_days = _add(chip.last_7_days, _sum_rows([row], ACTIVITY_COUNTS))
+            chip.hour_histogram_7d = _add_histograms(
+                chip.hour_histogram_7d, _sum_histograms([row])
+            )
+        for rfid_code, row in _chips(
+            await request("getActivityStats", "cats", ids, today, today, groupBy="cat")
+        ):
+            chip = stats.chips.setdefault(rfid_code, StatsWindow(day=today))
+            chip.today = _add(chip.today, _sum_rows([row], ACTIVITY_COUNTS))
 
     for device_id, time_zone in devices:
         device_today = local_today(time_zone, now)
-        device_first = device_today - timedelta(days=STATS_DAYS - 1)
-        days = _rows(
-            await send_message(
-                "getActivityStats",
-                window(device_first, device_today, [device_id]) | {"groupBy": "day"},
-            ),
-            "days",
+        device_start = device_today - timedelta(days=STATS_DAYS - 1)
+        ids = [device_id]
+        days = await request(
+            "getActivityStats", "days", ids, device_start, device_today, groupBy="day"
         )
-        totals = _rows(
-            await send_message(
-                "getDeviceActivityStats",
-                window(device_first, device_today, [device_id]),
-            ),
-            "days",
+        totals = await request(
+            "getDeviceActivityStats", "days", ids, device_start, device_today
         )
-        today_str = device_today.isoformat()
-        device = StatsWindow(hour_histogram_7d=_sum_histograms(days))
-        device.today = _sum_rows(
-            (row for row in days if row.get("dayLocal") == today_str), ACTIVITY_COUNTS
+
+        def on_today(rows: list[dict], day: date = device_today) -> list[dict]:
+            return [row for row in rows if row.get("dayLocal") == day.isoformat()]
+
+        # A device's prey attempts are event grain, not a sum over its chips.
+        device_counts = (*DEVICE_COUNTS, "preyAttempts")
+        stats.devices[device_id] = StatsWindow(
+            day=device_today,
+            today=_sum_rows(on_today(days), ACTIVITY_COUNTS)
+            | _sum_rows(on_today(totals), device_counts),
+            last_7_days=_sum_rows(days, ACTIVITY_COUNTS)
+            | _sum_rows(totals, device_counts),
+            hour_histogram_7d=_sum_histograms(days),
         )
-        device.last_7_days = _sum_rows(days, ACTIVITY_COUNTS)
-        # Prey attempts are event grain for a device, not a sum over chips.
-        today_totals = [row for row in totals if row.get("dayLocal") == today_str]
-        device.today |= _sum_rows(today_totals, (*DEVICE_COUNTS, "preyAttempts"))
-        device.last_7_days |= _sum_rows(totals, (*DEVICE_COUNTS, "preyAttempts"))
-        stats.devices[device_id] = device
     return stats
