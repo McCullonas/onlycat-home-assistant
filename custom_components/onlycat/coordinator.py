@@ -12,9 +12,19 @@ if TYPE_CHECKING:
 import logging
 from datetime import timedelta
 
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.debounce import Debouncer
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .api import OnlyCatApiClientError
 from .const import DOMAIN
+from .data.activity_stats import (
+    ActivityStats,
+    ActivityStatsError,
+    fetch_activity_stats,
+)
+
+STATS_UPDATE_INTERVAL = timedelta(minutes=5)
+STATS_REFRESH_COOLDOWN = 30
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -85,3 +95,38 @@ class OnlyCatDataUpdateCoordinator(DataUpdateCoordinator):
                 except TimeoutError:
                     _LOGGER.exception("Error fetching OnlyCat metrics: %s")
         return data
+
+
+class OnlyCatStatsCoordinator(DataUpdateCoordinator[ActivityStats]):
+    """Polls OnlyCat's daily activity stats, and refreshes after flap events."""
+
+    def __init__(self, hass: HomeAssistant, config_entry: OnlyCatConfigEntry) -> None:
+        """Initialize the activity stats updater."""
+        super().__init__(
+            hass,
+            _LOGGER,
+            config_entry=config_entry,
+            name=f"{DOMAIN}_activity_stats",
+            update_interval=STATS_UPDATE_INTERVAL,
+            request_refresh_debouncer=Debouncer(
+                hass, _LOGGER, cooldown=STATS_REFRESH_COOLDOWN, immediate=False
+            ),
+        )
+
+    async def on_flap_event(self, *_args: object) -> None:
+        """Refresh soon after a flap event, so today's counts follow it."""
+        await self.async_request_refresh()
+
+    async def _async_update_data(self) -> ActivityStats:
+        """Fetch the stats for every device of the account."""
+        runtime_data = self.config_entry.runtime_data
+        try:
+            return await fetch_activity_stats(
+                runtime_data.client.send_message,
+                [
+                    (device.device_id, device.time_zone)
+                    for device in runtime_data.devices
+                ],
+            )
+        except (ActivityStatsError, OnlyCatApiClientError, TimeoutError) as error:
+            raise UpdateFailed(str(error)) from error

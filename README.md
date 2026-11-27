@@ -15,6 +15,10 @@ HomeAssistant integration for [OnlyCat](https://www.onlycat.com/) flaps.
    * 👤 Human detection
    * ⚠️ Device errors
    * 🎥 Last activity video and image
+* 📊 Count the day's flap activity, as the OnlyCat app does, with sensors for:
+   * 🐈 each cat: transits in and out, peeks, denies and prey attempts today
+   * 🚪 each flap: the same for every cat together, plus events, human activity, remote and manual unlocks and unidentified transits today
+   * 📈 every one of them carries its total for the last 7 days (`last_7_days`) and the 7 days' transits by hour of the day (`hour_histogram_7d`); sensors for chips without a name start disabled
 * 🚪 Manage the active door policy manually or using automations
 * 📋 View and change door policy information via sensors and the `update_device_policy` service
 * 🔄 Control your flap remotely using reboot and remote unlock buttons

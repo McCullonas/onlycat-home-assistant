@@ -78,6 +78,53 @@
             "onlycat_last_activity_video": {
                 "name": "Last activity video"
             }
+        },
+        "sensor": {
+            "onlycat_transits_in_today": {
+                "name": "Transits in today"
+            },
+            "onlycat_transits_out_today": {
+                "name": "Transits out today"
+            },
+            "onlycat_peeks_today": {
+                "name": "Peeks today"
+            },
+            "onlycat_denies_today": {
+                "name": "Denies today"
+            },
+            "onlycat_prey_attempts_today": {
+                "name": "Prey attempts today"
+            },
+            "onlycat_events_today": {
+                "name": "Events today"
+            },
+            "onlycat_human_activity_today": {
+                "name": "Human activity today"
+            },
+            "onlycat_remote_unlocks_today": {
+                "name": "Remote unlocks today"
+            },
+            "onlycat_manual_unlocks_today": {
+                "name": "Manual unlocks today"
+            },
+            "onlycat_unidentified_transits_today": {
+                "name": "Unidentified transits today"
+            },
+            "onlycat_pet_transits_in_today": {
+                "name": "{pet_name}: Transits in today"
+            },
+            "onlycat_pet_transits_out_today": {
+                "name": "{pet_name}: Transits out today"
+            },
+            "onlycat_pet_peeks_today": {
+                "name": "{pet_name}: Peeks today"
+            },
+            "onlycat_pet_denies_today": {
+                "name": "{pet_name}: Denies today"
+            },
+            "onlycat_pet_prey_attempts_today": {
+                "name": "{pet_name}: Prey attempts today"
+            }
         }
     }
 }
